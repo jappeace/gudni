@@ -46,8 +46,8 @@ instance Model PlotState where
                 mapM_ processInput inputs
             ) state
     constructScene state status =
-        Scene (light . greenish $ blue) <$> plots state
-    providePictureData _ = noPictures
+        Scene (light . greenish $ blue) . Just <$> plots state
+    providePictureMap _ = pure noPictures
     handleOutput state target = do  presentTarget target
                                     return state
 

@@ -1,5 +1,5 @@
-{-# LANGUAGE PatternSynonyms       #-}
-{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -27,21 +27,22 @@ module Graphics.Gudni.Figure.Segment
   )
 where
 
-import Graphics.Gudni.Figure.Space
-import Graphics.Gudni.Figure.Point
+import           Graphics.Gudni.Figure.Point
+import           Graphics.Gudni.Figure.Space
 
-import Control.Lens
+import           Control.Lens
 
-import System.Random
-import Control.Monad.Random
-import Control.DeepSeq
-import Data.Hashable
+import           Control.DeepSeq
+import           Control.Monad.Random
+import           Data.Hashable
+import           System.Random
 
 -- | A segment is a typesafe way to describe on link in a quadradic bezier curve.
 -- multiple on curves points can occur in sequence but multiple control points cannot.
 data Segment s = Seg
   { _anchor  :: Point2 s
-  , _control :: Maybe (Point2 s) }
+  , _control :: Maybe (Point2 s)
+  }
   deriving (Eq, Ord)
 makeLenses ''Segment
 

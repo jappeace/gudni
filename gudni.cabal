@@ -167,7 +167,7 @@ library
                      , filepath
                      , file-embed
 
-                     , sdl2 > 2
+                     , sdl2 > 2 && <= 2.4
                      -- text only needed for window names
                      , text
                      , OpenGL
@@ -185,7 +185,8 @@ library
   -- Directories containing source files.
   hs-source-dirs:   src
   ghc-options:
-  ld-options:       -headerpad_max_install_names
+  if os(darwin) 
+    ld-options:       -headerpad_max_install_names
 
   -- Base language which the package is written in.
   default-language:    Haskell2010

@@ -1,12 +1,12 @@
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE StandaloneDeriving   #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TemplateHaskell      #-}
-{-# LANGUAGE TypeFamilies         #-}
-{-# LANGUAGE StandaloneDeriving   #-}
-{-# LANGUAGE ExplicitForAll       #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE ExplicitForAll             #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 
 -----------------------------------------------------------------------------
@@ -33,38 +33,45 @@ module Graphics.Gudni.Layout.Glyph
   )
 where
 
-import Graphics.Gudni.Figure.Space
-import Graphics.Gudni.Figure.Box
-import Graphics.Gudni.Figure.Point
-import Graphics.Gudni.Figure.Outline
-import Graphics.Gudni.Figure.Transformer
-import Graphics.Gudni.Figure.ShapeTree
+import           Graphics.Gudni.Figure.Box
+import           Graphics.Gudni.Figure.Outline
+import           Graphics.Gudni.Figure.Point
+import           Graphics.Gudni.Figure.ShapeTree
+import           Graphics.Gudni.Figure.Space
+import           Graphics.Gudni.Figure.Transformer
 
-import Graphics.Gudni.Layout.Boxed
+import           Graphics.Gudni.Layout.Boxed
 
-import Graphics.Gudni.Util.Util
-import Graphics.Gudni.Util.Debug
+import           Graphics.Gudni.Util.Debug
+import           Graphics.Gudni.Util.Util
 
-import GHC.Float
-import Data.Int
-import Data.Maybe
-import Data.Char
-import qualified Data.Map as M
-import Control.Lens
-import Control.Monad.State
-import Control.DeepSeq
-import Data.Hashable
+import           Control.DeepSeq
+import           Control.Lens
+import           Control.Monad.State
+import           Data.Char
+import           Data.Hashable
+import           Data.Int
+import qualified Data.Map                          as M
+import           Data.Maybe
+import           GHC.Float
 
-import qualified Data.ByteString.Lazy as LB
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as VU
-import Data.Either
+import qualified Data.ByteString.Lazy              as LB
+import           Data.Either
+import qualified Data.Vector                       as V
+import qualified Data.Vector.Unboxed               as VU
 
-import qualified Graphics.Text.TrueType as F
-import qualified Graphics.Text.TrueType.Internal as FI
+import qualified Graphics.Text.TrueType            as F
+import qualified Graphics.Text.TrueType.Internal   as FI
 
 -- | Wrapper newtype for codepoint values.
 newtype CodePoint  = CodePoint  {unCodePoint  :: Int} deriving (Eq, Ord)
+
+deriving instance Num FI.FWord
+deriving instance Integral FI.FWord
+deriving instance Real FI.FWord
+deriving instance Enum FI.FWord
+deriving instance Ord FI.FWord
+
 
 instance NFData CodePoint where
   rnf (CodePoint p) = rnf p
@@ -117,7 +124,7 @@ flipY h (x,y) = (x, h + negate y)
 --makeLenses ''FI.HorizontalHeader
 --makeLenses ''F.RawGlyph
 
-rightOrError (Right t) = t
+rightOrError (Right t)  = t
 rightOrError (Left err) = error err
 
 -- | Retrieve a glyph from the glyphCache, read it from the font file if necessary.
@@ -139,14 +146,14 @@ getGlyph codepoint =
                 glyphVector :: V.Vector F.RawGlyph
                 (advance, glyphVector) = F.getCharacterGlyphsAndMetrics font (chr . unCodePoint $ codepoint)
                 -- get the general metadata header for the font.
-                header = font ^. F.fontHorizontalHeader
+                header = FI._fontHorizontalHeader font
                 -- pull the acent and descent information for the header.
-                ascent  = (fromJust header) ^. FI.hheaAscent
-                descent = (fromJust header) ^. FI.hheaDescent
+                ascent  =  FI._hheaAscent (fromJust header)
+                descent =  FI._hheaDescent (fromJust header)
                 -- get the list of contours from first rawglyph.
                 contours :: [VU.Vector (Int16, Int16)]
                 contours = if V.length glyphVector > 0
-                           then (V.head glyphVector) ^. F.rawGlyphContour
+                           then F._rawGlyphContour (V.head glyphVector)
                            else []
                 height = ascent + descent
                 vertices :: [[(Int16,Int16)]]

@@ -1,9 +1,11 @@
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE LambdaCase       #-}
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, UndecidableInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -28,23 +30,23 @@ module Graphics.Gudni.Figure.OpenCurve
   )
 where
 
-import Graphics.Gudni.Figure.Space
-import Graphics.Gudni.Figure.Point
-import Graphics.Gudni.Figure.Segment
-import Graphics.Gudni.Figure.Angle
-import Graphics.Gudni.Figure.Transformer
+import           Graphics.Gudni.Figure.Angle
+import           Graphics.Gudni.Figure.Point
+import           Graphics.Gudni.Figure.Segment
+import           Graphics.Gudni.Figure.Space
+import           Graphics.Gudni.Figure.Transformer
 
-import Graphics.Gudni.Util.Debug
+import           Graphics.Gudni.Util.Debug
 
-import Data.Maybe
-import Data.Fixed
-import Data.Hashable
-import qualified Data.Map as M
+import           Data.Fixed
+import           Data.Hashable
+import qualified Data.Map                          as M
+import           Data.Maybe
 
-import Control.Monad.State
-import Control.DeepSeq
-import Control.Applicative
-import Control.Lens
+import           Control.Applicative
+import           Control.DeepSeq
+import           Control.Lens
+import           Control.Monad.State
 
 -- | An (almost) typesafe representation of an open bezier curve.
 data OpenCurve s = OpenCurve
@@ -56,7 +58,7 @@ makeLenses ''OpenCurve
 -- | The first point on the curve of an open curve or the terminator if it only has one point.
 outset :: Lens' (OpenCurve s) (Point2 s)
 outset elt_fn (OpenCurve segments terminator) =
-  let (Seg p mc) = head segments
+  let (Seg p mc) = head segments -- unsafe this should be a prism?
   in  (\p' -> OpenCurve (Seg p' mc:tail segments) terminator) <$> elt_fn p
 
 -- | Map over every point in an OpenCurve
@@ -69,8 +71,8 @@ pullSegments (Seg o0 c0) (Seg o1 c1) = Seg o1 c0
 
 -- | Map a function f over every consecutive pair in a list of one or more elements.
 acrossPairs f (a:b:cs) = f a b : acrossPairs f (b:cs)
-acrossPairs f (a:[]) = []
-acrossPairs f [] = error "list must have on or more elements"
+acrossPairs f (a:[])   = []
+acrossPairs f []       = error "list must have on or more elements"
 
 -- | Return the same curve in the opposite order.
 reverseCurve :: OpenCurve s -> OpenCurve s

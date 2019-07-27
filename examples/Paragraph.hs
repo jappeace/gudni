@@ -12,7 +12,7 @@ import Graphics.Gudni.Figure
 import Graphics.Gudni.Layout
 import Graphics.Gudni.Application
 
-import Data.Maybe(listToMaybe, fromMaybe, fromJust)
+import Data.Maybe(listToMaybe, fromMaybe)
 import Control.Lens
 import Control.Monad
 import Control.Monad.State
@@ -76,8 +76,8 @@ instance Model ParagraphState where
             statusTree <- statusDisplay state "Test Paragraph" (lines status)
             let tree = transformFromState testScene state
                 withStatus = if False then overlap [statusTree, tree] else tree
-            return (Scene (light gray) $ fromJust $ withStatus ^. unBoxed)
-    providePictureData _ = noPictures
+            return (Scene (light gray) $ withStatus ^. unBoxed)
+    providePictureMap _ = pure noPictures
     handleOutput state target = do  presentTarget target
                                     return state
 

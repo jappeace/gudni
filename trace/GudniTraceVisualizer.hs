@@ -343,7 +343,7 @@ instance Model TraceState where
             let tree = transformFromState state $ constructFromState state
                 withStatus = if True  then overlap [statusTree, tree] else tree
             return $ Scene (light gray) $ view unBoxed $ withStatus
-    providePictureData state = noPictures
+    providePictureMap _ = pure noPictures
     handleOutput state target = do  presentTarget target
                                     return state
 
