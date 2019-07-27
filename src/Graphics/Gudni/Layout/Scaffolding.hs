@@ -127,7 +127,7 @@ distributeStack :: HasSpace rep
                 -> [Boxed rep]
 distributeStack gap = betweenList (Boxed (Box zeroPoint (makePoint 0 gap)) Nothing)
 
-class Overlappable a where
+class Overlappable a where -- semigroup? 
   combine :: a -> a -> a
 
 combineBoxed :: HasSpace rep

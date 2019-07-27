@@ -92,6 +92,11 @@ deviceNameContains selector deviceInfo = isInfixOf selector (deviceInfo ^. clDev
 deviceSelect :: (CLDeviceDetail -> Bool) -> (CLDeviceDetail -> CLDeviceDetail -> Ordering) -> [CLDeviceDetail] -> Maybe CLDeviceDetail
 deviceSelect qualified order details = listToMaybe . sortBy order . filter qualified $ details
 
+dumpBuildLog :: OpenCLState -> String -> IO String
+dumpBuildLog state str = do
+    program <- clCreateProgramWithSource (clContext state) $ str 
+    clGetProgramBuildLog program $ clDevice state
+
 -- | Create a Rasterizer by setting up an OpenCL device.
 setupOpenCL :: Bool -> Bool -> BS.ByteString -> IO Rasterizer
 setupOpenCL enableProfiling useCLGLInterop src =
@@ -125,7 +130,10 @@ setupOpenCL enableProfiling useCLGLInterop src =
               let modifiedSrc = addDefinesToSource rasterSpec src
               -- Compile the source.
               putStrLn $ "Starting OpenCL kernel compile"
+              log <- dumpBuildLog state modifiedSrc 
+              putStrLn log 
               program <- loadProgramWOptions options state modifiedSrc
+
               putStrLn $ "Finished OpenCL kernel compile"
               -- get the rasterizer kernel.
               rasterKernel <- program "multiTileRaster"
