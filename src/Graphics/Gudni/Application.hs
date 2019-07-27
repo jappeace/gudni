@@ -61,7 +61,6 @@ import Graphics.Gudni.OpenCL.CallKernels
 import Graphics.Gudni.Raster.Types
 
 import Graphics.Gudni.Raster.Constants (rANDOMFIELDsIZE)
-import Graphics.Gudni.OpenCL.EmbeddedOpenCLSource
 import Graphics.Gudni.Raster.TileTree
 import Graphics.Gudni.Raster.Serialize
 import Graphics.Gudni.Raster.Job
@@ -77,6 +76,7 @@ import Graphics.Gudni.Util.RandomField
 
 import qualified Data.Vector.Storable as VS
 import System.Info
+import qualified Data.ByteString as BS
 
 type SimpleTime = Double
 
@@ -124,8 +124,10 @@ runApplicationMonad = flip evalStateT
 -- | Initializes openCL, frontend interface, timekeeper, randomfield data and returns the initial `ApplicationState`
 setupApplication :: Model s => s -> IO (ApplicationState s)
 setupApplication state  =
-  do  -- Setup OpenCL state and kernels.
-      openCLLibrary <- setupOpenCL False False embeddedOpenCLSource
+  do
+      source <- BS.readFile "Kernels.cl"
+      -- Setup OpenCL state and kernels.
+      openCLLibrary <- setupOpenCL False False source 
       -- Initialize the backend state.
       backendState <- startInterface (screenSize state)
       -- Start the timeKeeper

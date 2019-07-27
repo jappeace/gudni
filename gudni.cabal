@@ -85,7 +85,6 @@ library
                      , Graphics.Gudni.Interface.ScreenMode
                      , Graphics.Gudni.Raster.Constants
                      , Graphics.Gudni.OpenCL.Setup
-                     , Graphics.Gudni.OpenCL.EmbeddedOpenCLSource
                      , Graphics.Gudni.OpenCL.CallKernels
                      , Graphics.Gudni.OpenCL.CppDefines
                      , Graphics.Gudni.OpenCL.Instances

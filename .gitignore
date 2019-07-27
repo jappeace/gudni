@@ -25,3 +25,4 @@ cabal.project.local
 .HTF/
 
 # End of https://www.gitignore.io/api/haskell
+.ghc.environment.x86_64-linux-8.4.4

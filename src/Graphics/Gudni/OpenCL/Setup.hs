@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Gudni.OpenCL.Setup
@@ -34,6 +35,8 @@ import CLUtil.Initialization
 
 import Data.List
 import Data.Maybe
+import Data.Foldable
+import Control.Exception
 
 import qualified Data.ByteString.Char8 as BS
 
@@ -92,10 +95,76 @@ deviceNameContains selector deviceInfo = isInfixOf selector (deviceInfo ^. clDev
 deviceSelect :: (CLDeviceDetail -> Bool) -> (CLDeviceDetail -> CLDeviceDetail -> Ordering) -> [CLDeviceDetail] -> Maybe CLDeviceDetail
 deviceSelect qualified order details = listToMaybe . sortBy order . filter qualified $ details
 
-dumpBuildLog :: OpenCLState -> String -> IO String
-dumpBuildLog state str = do
-    program <- clCreateProgramWithSource (clContext state) $ str 
-    clGetProgramBuildLog program $ clDevice state
+-- |Load a program from an OpenCLSource using a string listing the build options and a previously initialized
+-- 'OpenCLState' The returned function may be used to create
+-- executable kernels from the loaded program.
+loadProgramWOptions' :: (OpenCLSource s) => [CLBuildOption] -> OpenCLState -> s -> IO (String -> IO CLKernel)
+loadProgramWOptions' options state src =
+  do  program <- clCreateProgramWithSource (clContext state) $ prepSource src
+      catch (clBuildProgram program [clDevice state] $ formOptions options) $ \(x :: SomeException) -> do
+            errorLog <- clGetProgramBuildLog program $ clDevice state
+            putStrLn errorLog 
+            throwIO x
+      return $ clCreateKernel program
+
+-- Translate a CLBuildOption to a string.
+formOption :: CLBuildOption -> String
+formOption option = case option of
+  -- | -------- Preprocessor Options ----------
+  -- | Predefine name as a macro, with definition 1.
+  -- | -D name=definition or -D name
+  -- The contents of definition are tokenized and processed as if they appeared during translation phase three in a
+  --  `#define' directive. In particular, the definition will be truncated by embedded newline characters.
+  CLDefine name mDef -> "-D " ++ name ++ maybe "" ('=':) mDef
+  -- | -I dir
+  -- | Add the directory dir to the list of directories to be searched for header files.
+  CLIncludeDir directory -> "-I dir " ++ directory
+  -- | ---------- Math Intrinsics Options--------
+  -- | These options control compiler behavior regarding floating-point arithmetic.
+  -- | These options trade off between speed and correctness.
+  -- | Treat double precision floating-point constant as single precision constant.
+  CLSinglePrecisionConstant -> "-cl-single-precision-constant"
+  -- | This option controls how single precision and double precision denormalized numbers are handled.
+  -- | If specified as a build option, the single precision denormalized numbers may be flushed to zero and if
+  -- | the optional extension for double precision is supported, double precision denormalized numbers may also be flushed to zero.
+  -- | This is intended to be a performance hint and the OpenCL compiler can choose not to flush denorms to zero if the device supports
+  -- | single precision (or double precision) denormalized numbers.
+  -- | This option is ignored for single precision numbers if the device does not support single precision denormalized numbers i.e.
+  -- | CL_FP_DENORM bit is not set in CL_DEVICE_SINGLE_FP_CONFIG.
+  -- | This option is ignored for double precision numbers if the device does not support double precision or if it does support
+  -- | double precison but CL_FP_DENORM bit is not set in CL_DEVICE_DOUBLE_FP_CONFIG.
+  -- | This flag only applies for scalar and vector single precision floating-point variables and computations on these floating-point variables inside a program. It does not apply to reading from or writing to image objects.
+  CLDenormsAreZero -> "-cl-denorms-are-zero"
+  -- | ----------- Optimization Options -------------
+  -- | These options control various sorts of optimizations. Turning on optimization flags makes the compiler attempt to improve the performance and/or code size at the expense of compilation time and possibly the ability to debug the program.
+  -- | This option disables all optimizations. The default is optimizations are enabled.
+  CLOptDisable -> "-cl-opt-disable"
+  -- | This option allows the compiler to assume the strictest aliasing rules.
+  CLStrictAliasing -> "-cl-strict-aliasing"
+  -- | The following options control compiler behavior regarding floating-point arithmetic. These options trade off between performance and correctness and must be specifically enabled. These options are not turned on by default since it can result in incorrect output for programs which depend on an exact implementation of IEEE 754 rules/specifications for math functions.
+  -- | Allow a * b + c to be replaced by a mad. The mad computes a * b + c with reduced accuracy. For example, some OpenCL devices implement mad as truncate the result of a * b before adding it to c.
+  CLMadEnable -> "-cl-mad-enable"
+  -- | Allow optimizations for floating-point arithmetic that ignore the signedness of zero. IEEE 754 arithmetic specifies the behavior of distinct +0.0 and -0.0 values, which then prohibits simplification of expressions such as x+0.0 or 0.0*x (even with -clfinite-math only). This option implies that the sign of a zero result isn't significant.
+  CLNoSignedZeros -> "-cl-no-signed-zeros"
+  -- | Allow optimizations for floating-point arithmetic that (a) assume that arguments and results are valid, (b) may violate IEEE 754 standard and (c) may violate the OpenCL numerical compliance requirements as defined in section 7.4 for single-precision floating-point, section 9.3.9 for double-precision floating-point, and edge case behavior in section 7.5. This option includes the -cl-no-signed-zeros and -cl-mad-enable options.
+  CLUnsafeMathOptimizations -> "-cl-unsafe-math-optimizations"
+  -- | Allow optimizations for floating-point arithmetic that assume that arguments and results are not NaNs or ±∞. This option may violate the OpenCL numerical compliance requirements defined in in section 7.4 for single-precision floating-point, section 9.3.9 for double-precision floating-point, and edge case behavior in section 7.5.
+  CLFiniteMathOnly -> "-cl-finite-math-only"
+  -- | Sets the optimization options -cl-finite-math-only and -cl-unsafe-math-optimizations.
+  -- | This allows optimizations for floating-point arithmetic that may violate the IEEE 754 standard and the OpenCL numerical compliance requirements defined in the specification in section 7.4 for single-precision floating-point, section 9.3.9 for double-precision floating-point, and edge case behavior in section 7.5. This option causes the preprocessor macro __FAST_RELAXED_MATH__ to be defined in the OpenCL rogram.
+  CLFastRelaxedMath -> "-cl-fast-relaxed-math"
+  -- | Options to Request or Suppress Warnings
+  -- | Warnings are diagnostic messages that report constructions which are not inherently erroneous but which are risky or suggest there may have been an error. The following languageindependent options do not enable specific warnings but control the kinds of diagnostics produced by the OpenCL compiler.
+  -- | Inhibit all warning messages.
+  CLInhibitWarning -> "-w"
+  -- | Make all warnings into errors.
+  CLWarningIntoError -> "-Werror"
+
+
+-- Translate a list of buildOptions
+formOptions :: [CLBuildOption] -> String
+formOptions = intercalate " " . map formOption
+
 
 -- | Create a Rasterizer by setting up an OpenCL device.
 setupOpenCL :: Bool -> Bool -> BS.ByteString -> IO Rasterizer
@@ -128,11 +197,10 @@ setupOpenCL enableProfiling useCLGLInterop src =
               let device = clDevice state
               rasterSpec <- determineRasterSpec device
               let modifiedSrc = addDefinesToSource rasterSpec src
+              putStrLn $ modifiedSrc 
               -- Compile the source.
               putStrLn $ "Starting OpenCL kernel compile"
-              log <- dumpBuildLog state modifiedSrc 
-              putStrLn log 
-              program <- loadProgramWOptions options state modifiedSrc
+              program <- loadProgramWOptions' options state modifiedSrc
 
               putStrLn $ "Finished OpenCL kernel compile"
               -- get the rasterizer kernel.
