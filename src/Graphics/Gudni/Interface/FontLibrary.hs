@@ -18,6 +18,7 @@ module Graphics.Gudni.Interface.FontLibrary
   )
 where
 
+import Control.Exception
 import System.Info
 import Control.Monad
 import Data.List
@@ -48,13 +49,22 @@ fontDirectories =
     _        -> return ["C:\\windows\\fonts\\"]
 
 -- | Get the absolute contents of a director.
+absoluteDirectoryContents :: FilePath -> IO [String]
 absoluteDirectoryContents dir =
   do files <- getDirectoryContents dir
      return $ map (addTrailingPathSeparator dir ++) files
+
+printException :: FilePath -> IOException -> IO [String]
+printException dir x = do
+    putStrLn $ " ignoring directory" <> dir <> "because " <> show x
+    pure mempty
 
 -- | Return a list of loadable font files on the system.
 fontLibrary :: IO [String]
 fontLibrary =
   do dirs <- fontDirectories
-     files <- concat <$> mapM absoluteDirectoryContents dirs
+     files <- fmap concat $ traverse (\dir ->
+                catch (absoluteDirectoryContents dir)
+                      (printException dir)) dirs
+
      return $ filter (isSuffixOf "ttf") files
