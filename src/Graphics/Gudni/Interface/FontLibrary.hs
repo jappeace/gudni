@@ -44,6 +44,7 @@ absolutizeMacPath aPath
 fontDirectories =
   case os of
     "darwin" -> mapM absolutizeMacPath ["~/Library/Fonts/", "/Library/Fonts/"]
+    "linux" -> mapM absolutizeMacPath ["~/.fonts", "/usr/share/fonts"]
     _        -> return ["C:\\windows\\fonts\\"]
 
 -- | Get the absolute contents of a director.
