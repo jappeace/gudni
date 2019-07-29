@@ -30,7 +30,16 @@ import Data.List (isPrefixOf)
 
 
 findDefaultFont :: IO String
-findDefaultFont = fromMaybe "Times New Roman.ttf" <$> listToMaybe . filter (isInfixOf "Times New Roman.ttf") <$> fontLibrary
+findDefaultFont = do
+  fonts <- fontLibrary
+  case (listToMaybe $ filter (isInfixOf "Times New Roman.ttf") fonts) of
+    Just x -> pure x
+    Nothing -> 
+      maybe (do
+                putStrLn "can't find Times New Roman, choosing first available"
+                print fonts
+                pure $ head $ fonts
+            )  pure $ listToMaybe $ filter (isInfixOf "Times_New_Roman.ttf") fonts
 
 -- | Make a relative path absolute on MacOS.
 absolutizeMacPath :: String -> IO String
@@ -42,10 +51,10 @@ absolutizeMacPath aPath
     | otherwise = return aPath
 
 -- | Get the default font director based on the host operating system.
-fontDirectories =
+fontDirectories = -- maybe use http://hackage.haskell.org/package/load-font ?
   case os of
     "darwin" -> mapM absolutizeMacPath ["~/Library/Fonts/", "/Library/Fonts/"]
-    "linux" -> mapM absolutizeMacPath ["~/.fonts", "/usr/share/fonts"]
+    "linux" -> mapM absolutizeMacPath ["/usr/share/fonts/truetype/liberation/", "/usr/share/fonts/truetype/msttcorefonts/"]
     _        -> return ["C:\\windows\\fonts\\"]
 
 -- | Get the absolute contents of a director.
