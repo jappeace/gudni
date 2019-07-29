@@ -21,6 +21,7 @@
 module Graphics.Gudni.Layout.Draw
   ( lPath
   , rectangle
+  , stroke
   , unitSquare
   , openRectangle
   , line
@@ -43,6 +44,7 @@ import Graphics.Gudni.Util.Util
 import Graphics.Gudni.Util.Plot
 import Graphics.Gudni.Layout.Boxed
 import Graphics.Gudni.Layout.Scaffolding
+import qualified Data.Vector as V
 
 import Data.Char (ord)
 import Control.Lens
@@ -78,6 +80,7 @@ instance Space s => HasRectangle (Boxed (CompoundTree s)) where
 
 instance Space s => HasRectangle (CompoundTree s) where
     rectangle v = SLeaf . segmentsToOutline . pure . rectangleCurve $ v
+
 
 unitSquare :: HasRectangle a => a
 unitSquare = rectangle (Point2 1 1)
@@ -176,3 +179,12 @@ lPath name =
   case curveLibrary name of
     Just path -> boxedOutline . segmentsToOutline . pure . closeOpenCurve $ path
     Nothing -> unitSquare
+
+class CanStroke a where
+  stroke :: a -> a
+
+instance Space s => CanStroke (CompoundTree s) where
+  stroke = tTranslateXY 0.5 0.5
+
+instance Space s => CanStroke (Boxed (CompoundTree s)) where
+  stroke = tTranslateXY 0.5 0.5

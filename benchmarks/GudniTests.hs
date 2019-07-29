@@ -24,6 +24,7 @@ where
 import Graphics.Gudni.Interface
 import Graphics.Gudni.Figure
 import Graphics.Gudni.Application
+import qualified Data.Vector as V
 
 import Graphics.Gudni.Layout
 
@@ -35,7 +36,6 @@ import Data.Maybe
 import Data.Char
 import Control.Lens
 import qualified Data.Vector.Storable as VS
-import qualified Data.Vector as V
 
 import Control.Monad.Random
 import System.Random
@@ -73,7 +73,7 @@ initialModel pictureMap =
     , _stateCursor      = Point2 63 1376
     , _statePictureMap  = pictureMap
     , _stateTests       = testList
-    , _stateCurrentTest = 12
+    , _stateCurrentTest = 33
     , _stateStep        = 69
     , _stateFrameNumber = 0
     }
@@ -111,6 +111,7 @@ testList = [ ("openSquareOverlap3", openSquareOverlap3  ) --  0 -
            , ("fuzzyCircles2"     , fuzzyCircles2       ) -- 30 -
            , ("fullRectangle"     , fullRectangle       ) -- 31 -
            , ("1 Million Circles" , millionFuzzyCircles ) -- 32 -
+           , ("strokeMark"        , strokeMark          ) -- 33
            ]
 
 maxThresholdTest :: Monad m => BenchmarkState -> GlyphMonad m (ShapeTree Int SubSpace)
@@ -424,11 +425,24 @@ twoBrackets state = return $
                            ]
             ]
 
+strokeMark :: Monad m => BenchmarkState -> GlyphMonad m (ShapeTree Int SubSpace)
+strokeMark state = pure $
+  solid white $ overlap [segs, tTranslateXY 200 200 $ overlap [stroke segs, segs, stroke $ stroke segs]]
+  where 
+    segs = overlap [ fromSegments [
+            straight (-2) 0, straight   12  14
+            ,straight   12  16, straight (-2) 2
+            ]
+            , fromSegments [straight (-2) 4, straight   12  18
+                           ,straight   12  2, straight (-2) 6
+                           ]
+            ]
+
 -- | Very simple subtraction test.
 subtractDiamond :: Monad m => BenchmarkState -> GlyphMonad m (ShapeTree Int SubSpace)
 subtractDiamond state = return .
     tRotate (45 @@ deg) .
-    solid white $
+    solid (transparent 1.0 white) $
     cSubtract unitSquare (tTranslateXY 1 1 $ unitSquare)
 
 instance Show BenchmarkState where

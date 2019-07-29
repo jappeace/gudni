@@ -54,7 +54,7 @@ class (HasSpace t) => SimpleTransformable t where
 class SimpleTransformable t => Transformable t where
   tRotate    :: Angle (SpaceOf t) -> t -> t
 
-tTranslateXY :: (HasSpace t, SimpleTransformable t) => X (SpaceOf t) -> Y (SpaceOf t) -> t -> t
+tTranslateXY :: (SimpleTransformable t) => X (SpaceOf t) -> Y (SpaceOf t) -> t -> t
 tTranslateXY x y = tTranslate $ makePoint x y
 
 identityTransform :: Num s => Transformer s
